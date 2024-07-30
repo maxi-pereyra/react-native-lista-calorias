@@ -1,20 +1,46 @@
-import React, { useState } from 'react'
-import { View, StyleSheet, Text, Alert} from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, StyleSheet, Text, Alert, ScrollView} from 'react-native'
 import Header from '../../components/Header/Index'
 import { Button, Icon, Input } from '@rneui/themed'
 import AddFoodModal from '../../components/AddFoodModal/AddFoodModal'
 import useFoodStorage from '../../hooks/useFoodStorage'
+import { Meal } from '../../types/Index'
+import Meal_item from '../../components/Meal_item'
 
 const AddFood = () => {
   const [visible, setVisible] = useState<boolean>(false)
   const { onGetFood } = useFoodStorage();
+  const [food , setFood] = useState<Meal[]>([]);
+  const [search , setSearch] = useState<string>('')
 
-  const handleModalClose = (shouldUpdate?: boolean) => {
+  const loadFoods = async () =>{
+    try {
+      const foodsResponse = await onGetFood();
+      setFood(foodsResponse)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(()=>{
+    loadFoods().catch(null)
+  },[]);
+
+  const handleModalClose = async (shouldUpdate?: boolean) => {
     if(shouldUpdate){
       Alert.alert('comida guardada exitosamente')
-      //TODO
+      loadFoods()
     }
     setVisible(!visible)
+  }
+
+  const handleSearchPress = async () => {
+    try {
+      const result = await onGetFood();
+      setFood(result.filter((item: Meal)=>item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())))
+    } catch (error) {
+      setFood([])
+    }
   }
 
   return (
@@ -35,14 +61,22 @@ const AddFood = () => {
       </View>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
-          <Input placeholder='apple,soda,...'/>
+          <Input placeholder='apple,soda,...'
+                 value={search}
+                 onChangeText={(text: string) => setSearch(text)}/>
         </View>
             <Button  
             radius='lg'
             title='search'
             titleStyle={styles.searchBtnTitle}
+            onPress={handleSearchPress}
             color="#ade8af"/>
       </View>
+      <ScrollView style={styles.content}>
+        {
+          food?.map((meal) => <Meal_item key={`my-meal-item-${meal.name}`} {...meal} isAbleToadd   />)
+        }
+      </ScrollView>
       <AddFoodModal visible={visible} onClose={handleModalClose}/>
     </View>
   )
@@ -77,6 +111,9 @@ const styles = StyleSheet.create({
   searchBtnTitle:{
     fontSize: 14,
     color: '#000'
+  },
+  content:{
+
   }
 })
 
